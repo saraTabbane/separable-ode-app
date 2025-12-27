@@ -195,6 +195,23 @@ if solve_clicked:
             if sols:
                 for sol in sols:
                     st.latex(r"y = " + sp.latex(sp.simplify(sol)))
+                # --- Step 5 — Rewrite exp(C) as a simple constant ---
+                st.markdown("### Step 5 — Rewrite the constant simply")
+
+                simplified_solutions = []
+                # Change the C to "y_0" if you prefer that notation
+                new_const = sp.Symbol("C")
+
+                for sol in sols:
+                    # Replace exp(C) with a new constant symbol
+                    sol_simpl = sol.replace(sp.exp(C), new_const)
+                    simplified_solutions.append(sp.simplify(sol_simpl))
+
+                st.write("We use the fact that:")
+                st.latex(r"e^C \;\text{is just another constant, so we rename it}\; C.")
+                st.markdown("#### Final simplified form:")
+                for sol in simplified_solutions:
+                    st.latex(r"y = " + sp.latex(sol))
             else:
                 st.info("Could not isolate y explicitly. The implicit solution is still correct.")
         except Exception:
