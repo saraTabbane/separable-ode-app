@@ -99,16 +99,30 @@ def latex_simpl(expr: sp.Expr) -> str:
 
 
 def rewrite_exp_constant(expr: sp.Expr, const_sym: sp.Symbol) -> sp.Expr:
-    def _exp_rewrite(e: sp.Expr) -> sp.Expr:
+    """
+    Rewrite factors of the form exp(C + something) as C*exp(something),
+    and then treat exp(C) itself as just a new constant C.
+    """
+    # Simple case: whole expression is exp(...)
+    if expr.func == sp.exp:
+        arg = expr.args[0]
+        if arg.is_Add and const_sym in arg.free_symbols:
+            non_const = sp.simplify(arg - const_sym)
+            new_const = sp.Symbol("C")  # or sp.Symbol("y_0") if you prefer y0
+            return new_const * sp.exp(non_const)
+        return expr
+
+    # More general walk (for more complex expressions)
+    def _rewrite(e):
         if e.func == sp.exp:
             arg = e.args[0]
             if arg.is_Add and const_sym in arg.free_symbols:
-                arg_without_c = sp.simplify(arg - const_sym)
-                return sp.exp(const_sym) * sp.exp(arg_without_c)
+                non_const = sp.simplify(arg - const_sym)
+                new_const = sp.Symbol("C")
+                return new_const * sp.exp(non_const)
         return e
 
-    rewritten = expr.replace(lambda e: e.func == sp.exp, _exp_rewrite)
-    return rewritten.replace(sp.exp(const_sym), const_sym)
+    return expr.replace(lambda e: isinstance(e, sp.Expr), _rewrite)
 
 
 # ----------------------------
@@ -202,12 +216,13 @@ if solve_clicked:
     st.latex(sp.latex(implicit_eq))
 
     if show_explicit:
-        st.markdown("### Step 4  — Solve for y")
+        st.markdown("### Step 4 (optional) — Solve for y")
         try:
             sols = sp.solve(sp.Eq(Iy, Ix + C), y)
             if sols:
                 for sol in sols:
                     st.latex(r"y = " + sp.latex(sp.simplify(sol)))
+
                 # --- Step 5 — Rewrite exp(C) as a simple constant ---
                 st.markdown("### Step 5 — Rewrite the constant simply")
 
