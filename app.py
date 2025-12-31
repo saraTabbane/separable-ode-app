@@ -98,6 +98,19 @@ def latex_simpl(expr: sp.Expr) -> str:
     return sp.latex(sp.simplify(expr))
 
 
+def rewrite_exp_constant(expr: sp.Expr, const_sym: sp.Symbol) -> sp.Expr:
+    def _exp_rewrite(e: sp.Expr) -> sp.Expr:
+        if e.func == sp.exp:
+            arg = e.args[0]
+            if arg.is_Add and const_sym in arg.free_symbols:
+                arg_without_c = sp.simplify(arg - const_sym)
+                return sp.exp(const_sym) * sp.exp(arg_without_c)
+        return e
+
+    rewritten = expr.replace(lambda e: e.func == sp.exp, _exp_rewrite)
+    return rewritten.replace(sp.exp(const_sym), const_sym)
+
+
 # ----------------------------
 # UI
 # ----------------------------
@@ -189,7 +202,7 @@ if solve_clicked:
     st.latex(sp.latex(implicit_eq))
 
     if show_explicit:
-        st.markdown("### Step 4 (optional) — Solve for y")
+        st.markdown("### Step 4  — Solve for y")
         try:
             sols = sp.solve(sp.Eq(Iy, Ix + C), y)
             if sols:
@@ -199,12 +212,8 @@ if solve_clicked:
                 st.markdown("### Step 5 — Rewrite the constant simply")
 
                 simplified_solutions = []
-                # Change the C to "y_0" if you prefer that notation
-                new_const = sp.Symbol("C")
-
                 for sol in sols:
-                    # Replace exp(C) with a new constant symbol
-                    sol_simpl = sol.replace(sp.exp(C), new_const)
+                    sol_simpl = rewrite_exp_constant(sol, C)
                     simplified_solutions.append(sp.simplify(sol_simpl))
 
                 st.write("We use the fact that:")
